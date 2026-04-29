@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Cache folders
+/cache/
+.cache/
+
+# Build / distribution
+dist/
+build/
+*.egg-info/
+
+# Processed data (do not include large generated files)
+/data/processed/
