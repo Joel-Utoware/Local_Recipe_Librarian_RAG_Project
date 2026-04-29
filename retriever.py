@@ -2,7 +2,15 @@
 
 from build_vector_db import build_database
 
-collection = build_database()
+
+_collection = None
+
+
+def get_collection():
+    global _collection
+    if _collection is None:
+        _collection = build_database()
+    return _collection
 
 
 def search_recipes(
@@ -18,7 +26,8 @@ def search_recipes(
     """
 
     if not query_text.strip():
-        return []
+        # Return empty-like Chroma response structure
+        return {"documents": [[]], "metadatas": [[]]}
 
     where_conditions = []
 
@@ -55,6 +64,7 @@ def search_recipes(
         where_clause = {"$and": where_conditions}
 
     # Query Chroma
+    collection = get_collection()
     results = collection.query(
         query_texts=[query_text],
         n_results=top_k,

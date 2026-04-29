@@ -2,7 +2,8 @@
 
 import chromadb
 from chromadb.utils import embedding_functions
-from documents import load_documents
+from documents import load_documents, INPUT_FILE
+from pathlib import Path
 
 
 DB_PATH = "data/processed/recipe_db"
@@ -12,6 +13,8 @@ BATCH_SIZE = 5000   # safely below Chroma max limit
 
 
 def get_client():
+    # Ensure the DB directory exists before creating the persistent client
+    Path(DB_PATH).mkdir(parents=True, exist_ok=True)
     return chromadb.PersistentClient(path=DB_PATH)
 
 
@@ -60,14 +63,27 @@ def add_in_batches(collection, docs, meta):
 
 def build_database():
     client = get_client()
+
+    # If a collection already exists with data, reuse it without loading model weights
+    try:
+        existing = client.get_collection(name=COLLECTION_NAME)
+        if existing.count() > 0:
+            print("Database already exists and contains data.")
+            print(f"Stored recipes: {existing.count()}")
+            return existing
+    except Exception:
+        # collection may not exist yet; continue to build
+        pass
+
+    # Ensure processed recipe input exists before loading heavy model weights
+    if not Path(INPUT_FILE).exists():
+        raise FileNotFoundError(
+            f"Processed recipes file not found: {INPUT_FILE}. Run preprocess.py to generate it."
+        )
+
+    # Create embedder and collection for first-time build
     embedder = get_embedder()
     collection = get_collection(client, embedder)
-
-    # Prevent duplicate rebuilds every run
-    if collection_has_data(collection):
-        print("Database already exists and contains data.")
-        print(f"Stored recipes: {collection.count()}")
-        return collection
 
     print("Loading recipe documents...")
     docs, meta = load_documents()
